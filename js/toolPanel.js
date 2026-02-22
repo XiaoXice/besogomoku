@@ -70,6 +70,30 @@ besogo.makeToolPanel = function(container, editor) {
     });
     container.appendChild(labelText);
 
+    // Create rule selector dropdown
+    var ruleSelect = document.createElement('select');
+    ruleSelect.id = 'besogo-rule-select';
+    ruleSelect.title = 'Select rule type';
+
+    var rules = [
+        { value: 'go', text: '围棋' },
+        { value: 'gomoku', text: '无禁手五子棋' },
+        { value: 'free', text: '自由落子' }
+    ];
+
+    for (var i = 0; i < rules.length; i++) {
+        var option = document.createElement('option');
+        option.value = rules[i].value;
+        option.textContent = rules[i].text;
+        ruleSelect.appendChild(option);
+    }
+
+    ruleSelect.onchange = function() {
+        editor.setRuleType(this.value);
+    };
+
+    container.appendChild(ruleSelect);
+
     makeButtonText('Pass', 'Pass move', function(){
         var tool = editor.getTool();
         if (tool !== 'navOnly' && tool !== 'auto' && tool !== 'playB' && tool !== 'playW') {

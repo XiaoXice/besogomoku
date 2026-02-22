@@ -6,6 +6,7 @@ besogo.makeFilePanel = function(container, editor) {
 
     makeNewBoardButton(9); // New 9x9 board button
     makeNewBoardButton(13); // New 13x13 board button
+    makeNewBoardButton(15); // New 15x15 board button
     makeNewBoardButton(19); // New 19x19 board button
     makeNewBoardButton('?'); // New custom board button
 

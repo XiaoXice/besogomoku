@@ -24,12 +24,16 @@ besogo.makeGameRoot = function(sizeX, sizeY) {
 
     // Plays a move, returns true if successful
     // Set allow to truthy to allow overwrite, suicide and ko
-    root.playMove = function(x, y, color, allow) {
+    root.playMove = function(x, y, color, allow, ruleType) {
         var captures = 0, // Number of captures made by this move
             overwrite = false, // Flags whether move overwrites a stone
             prevMove, // Previous move for ko check
             testBoard, // Copy of board state to test captures, ko, and suicide
             pending, // Pending capture locations
+
+            rule,
+            validation,
+            winResult,
             i; // Scratch iteration variable
 
         if (!this.isMutable('move')) {
@@ -53,52 +57,66 @@ besogo.makeGameRoot = function(sizeX, sizeY) {
         }
 
         if (this.getStone(x, y)) { // Check for overwrite
-            if (!allow) {
-                return false; // Reject overwrite move if not allowed
+            overwrite = true;
+        }
+
+        if (!allow) {
+            ruleType = ruleType || 'go';
+            rule = (besogo.rules && besogo.rules[ruleType]) ||
+                (besogo.rules && besogo.rules.go);
+
+            if (rule && rule.validateMove) {
+                validation = rule.validateMove(this, x, y, color, sizeX, sizeY);
+                if (!validation.valid) {
+                    return false;
+                }
             }
-            overwrite = true; // Otherwise, flag overwrite and proceed
-        }
 
-        testBoard = Object.create(this); // Copy board state (no need to initialize)
-        pending = []; // Initialize pending capture array
+            if (ruleType === 'go') {
+                testBoard = Object.create(this); // Copy board state (no need to initialize)
+                pending = []; // Initialize pending capture array
 
-        setStone(testBoard, x, y, color); // Place the move stone
+                setStone(testBoard, x, y, color); // Place the move stone
 
-        // Check for captures of surrounding chains
-        captureStones(testBoard, x - 1, y, color, pending);
-        captureStones(testBoard, x + 1, y, color, pending);
-        captureStones(testBoard, x, y - 1, color, pending);
-        captureStones(testBoard, x, y + 1, color, pending);
+                // Check for captures of surrounding chains
+                captureStones(testBoard, x - 1, y, color, pending);
+                captureStones(testBoard, x + 1, y, color, pending);
+                captureStones(testBoard, x, y - 1, color, pending);
+                captureStones(testBoard, x, y + 1, color, pending);
 
-        captures = pending.length; // Capture count
+                captures = pending.length; // Capture count
 
-        prevMove = this.parent ? this.parent.move : null; // Previous move played
-        if (!allow && prevMove && // If previous move exists, ...
-            prevMove.color === -color && // was of the opposite color, ...
-            prevMove.overwrite === false && // not an overwrite, ...
-            prevMove.captures === 1 && // captured exactly one stone, and if ...
-            captures === 1 && // this move captured exactly one stone at the location ...
-            !testBoard.getStone(prevMove.x, prevMove.y) ) { // of the previous move
-                return false; // Reject ko move if not allowed
-        }
+                prevMove = this.parent ? this.parent.move : null; // Previous move played
+                if (prevMove && // If previous move exists, ...
+                    prevMove.color === -color && // was of the opposite color, ...
+                    prevMove.overwrite === false && // not an overwrite, ...
+                    prevMove.captures === 1 && // captured exactly one stone, and if ...
+                    captures === 1 && // this move captured exactly one stone at the location ...
+                    !testBoard.getStone(prevMove.x, prevMove.y) ) { // of the previous move
+                        return false; // Reject ko move if not allowed
+                }
 
-        if (captures === 0) { // Check for suicide if nothing was captured
-            captureStones(testBoard, x, y, -color, pending); // Invert color for suicide check
-            captures = -pending.length; // Count suicide as negative captures
-            if (captures < 0 && !allow) {
-                return false; // Reject suicidal move if not allowed
+                if (captures === 0) { // Check for suicide if nothing was captured
+                    captureStones(testBoard, x, y, -color, pending); // Invert color for suicide check
+                    captures = -pending.length; // Count suicide as negative captures
+                    if (captures < 0) {
+                        return false; // Reject suicidal move if not allowed
+                    }
+                }
+
+                if (color * captures < 0) { // Capture by black or suicide by white
+                    this.blackCaps += Math.abs(captures); // Tally captures for black
+                } else { // Capture by white or suicide by black
+                    this.whiteCaps += Math.abs(captures); // Tally captures for white
+                }
             }
-        }
-
-        if (color * captures < 0) { // Capture by black or suicide by white
-            this.blackCaps += Math.abs(captures); // Tally captures for black
-        } else { // Capture by white or suicide by black
-            this.whiteCaps += Math.abs(captures); // Tally captures for white
         }
 
         setStone(this, x, y, color); // Place the stone
-        for (i = 0; i < pending.length; i++) { // Remove the captures
-            setStone(this, pending[i].x, pending[i].y, EMPTY);
+        if (!allow && ruleType === 'go') {
+            for (i = 0; i < pending.length; i++) { // Remove the captures
+                setStone(this, pending[i].x, pending[i].y, EMPTY);
+            }
         }
 
         this.move = { // Log the move
@@ -109,6 +127,13 @@ besogo.makeGameRoot = function(sizeX, sizeY) {
         };
         this.lastMove = color; // Store color of last move
         this.moveNumber++; // Increment move number
+
+        if (!allow && rule && rule.checkWin) {
+            winResult = rule.checkWin(this, x, y, color, sizeX, sizeY);
+            if (winResult.won) {
+                alert((color === -1 ? '黑方' : '白方') + '获胜！');
+            }
+        }
         return true;
     }; // END func root.playMove
 
