@@ -29,7 +29,9 @@ besogo.composeSgf = function(editor) {
 
     // Composes root specific properties
     function composeRootProps(tree) {
-        var string = 'FF[4]GM[1]CA[UTF-8]AP[besogo:' + besogo.VERSION + ']',
+        var ruleType = editor.getRuleType ? editor.getRuleType() : 'go',
+            gmValue = (ruleType === 'gomoku') ? 4 : 1,
+            string = 'FF[4]GM[' + gmValue + ']CA[UTF-8]AP[besogo:' + besogo.VERSION + ']',
             x = tree.getSize().x,
             y = tree.getSize().y,
             gameInfo = editor.getGameInfo(), // Game info structure

@@ -83,6 +83,10 @@ besogo.create = function(container, options) {
         editor.setVariantStyle(+options.variants); // Converts to number
     }
 
+    if (options.rule && besogo.rules && besogo.rules[options.rule]) {
+        editor.setRuleType(options.rule);
+    }
+
     while (container.firstChild) { // Remove all children of container
         container.removeChild(container.firstChild);
     }

@@ -33,7 +33,9 @@ besogo.makeEditor = function(sizeX, sizeY) {
         coord = 'none', // Selected coordinate system
 
         // Variant style: even/odd - children/siblings, <2 - show auto markup for variants
-        variantStyle = 0; // 0-3, 0 is default
+        variantStyle = 0, // 0-3, 0 is default
+
+        ruleType = 'go'; // Current rule type (default: go)
 
     return {
         addListener: addListener,
@@ -62,7 +64,9 @@ besogo.makeEditor = function(sizeX, sizeY) {
         promote: promote,
         demote: demote,
         getRoot: getRoot,
-        loadRoot: loadRoot // Loads new game state
+        loadRoot: loadRoot, // Loads new game state
+        getRuleType: getRuleType,
+        setRuleType: setRuleType
     };
 
     // Returns the active tool
@@ -440,7 +444,7 @@ besogo.makeEditor = function(sizeX, sizeY) {
         // Check if current node is immutable or root
         if ( !current.isMutable('move') || !current.parent ) {
             next = current.makeChild(); // Create a new child node
-            if (next.playMove(i, j, color, allowAll)) { // Play in new node
+            if (next.playMove(i, j, color, allowAll, ruleType)) { // Play in new node
                 // Keep (add to game state tree) only if move succeeds
                 current.addChild(next);
                 current = next;
@@ -448,7 +452,7 @@ besogo.makeEditor = function(sizeX, sizeY) {
                 notifyListeners({ treeChange: true, navChange: true, stoneChange: true });
             }
         // Current node is mutable and not root
-        } else if(current.playMove(i, j, color, allowAll)) { // Play in current
+        } else if(current.playMove(i, j, color, allowAll, ruleType)) { // Play in current
             // Only need to update if move succeeds
             notifyListeners({ stoneChange: true }); // Stones changed
         }
@@ -539,6 +543,17 @@ besogo.makeEditor = function(sizeX, sizeY) {
         }
         for (i = 0; i < listeners.length; i++) {
             listeners[i](msg);
+        }
+    }
+
+    function getRuleType() {
+        return ruleType;
+    }
+
+    function setRuleType(type) {
+        if (type !== ruleType && besogo.rules && besogo.rules[type]) {
+            ruleType = type;
+            notifyListeners({ ruleType: ruleType });
         }
     }
 };
